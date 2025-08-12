@@ -30,129 +30,31 @@ jobs:
         pip install mss
         pip install pywin32
     
-    - name: Create version info file
-      run: |
-        # Create version info to make executable look more legitimate
-        # Note: Using correct Python syntax for version info
-        $versionInfo = @'
-        VSVersionInfo(
-          ffi=FixedFileInfo(
-            filevers=(1,0,0,0),
-            prodvers=(1,0,0,0),
-            mask=0x3f,
-            flags=0x0,
-            OS=0x40004,
-            fileType=0x1,
-            subtype=0x0,
-            date=(0, 0)
-          ),
-          kids=[
-            StringFileInfo([
-              StringTable(
-                u'040904B0',
-                [StringStruct(u'CompanyName', u'Window Mirror Project'),
-                StringStruct(u'FileDescription', u'Window Mirror Application'),
-                StringStruct(u'FileVersion', u'1.0.0.0'),
-                StringStruct(u'InternalName', u'WindowMirror'),
-                StringStruct(u'LegalCopyright', u'Open Source'),
-                StringStruct(u'OriginalFilename', u'WindowMirror.exe'),
-                StringStruct(u'ProductName', u'Window Mirror'),
-                StringStruct(u'ProductVersion', u'1.0.0.0')])
-            ]),
-            VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
-          ]
-        )
-        '@
-        
-        # Save to current directory where PyInstaller can find it
-        $versionInfo | Out-File -FilePath "version_info.txt" -Encoding UTF8 -NoNewline
-        Write-Host "Version info file created at: $(Get-Location)\version_info.txt"
-        
-        # Verify file exists
-        if (Test-Path "version_info.txt") {
-          Write-Host "Version info file verified"
-          Get-Content "version_info.txt" | Select-Object -First 5
-        } else {
-          Write-Warning "Version info file not found!"
-        }
-      shell: powershell
-    
     - name: Create standalone executable
       run: |
-        Write-Host "Building standalone EXE with anti-virus optimizations..."
+        Write-Host "Building standalone EXE..."
         
         # Create build directories
-        New-Item -ItemType Directory -Path "build/work" -Force
+        New-Item -ItemType Directory -Path "build" -Force
         New-Item -ItemType Directory -Path "dist" -Force
         
-        # Verify version file exists before building
-        if (-not (Test-Path "version_info.txt")) {
-          Write-Warning "Version info file not found, building without version info"
-          $useVersionFile = $false
-        } else {
-          Write-Host "✓ Using version info file"
-          $useVersionFile = $true
-        }
+        # Simple PyInstaller command without complex conditionals
+        Write-Host "Running PyInstaller..."
+        pyinstaller --onefile --windowed --name "WindowMirror" --distpath dist --workpath build window_mirror.py
         
-        # Build with PyInstaller using PowerShell array syntax
-        if ($useVersionFile) {
-          $pyinstallerArgs = @(
-            "--onefile"
-            "--windowed" 
-            "--name", "WindowMirror"
-            "--distpath", "dist"
-            "--workpath", "build/work"
-            "--specpath", "build"
-            "--exclude-module", "tkinter.test"
-            "--exclude-module", "unittest"
-            "--exclude-module", "test"
-            "--exclude-module", "pydoc"
-            "--exclude-module", "doctest"
-            "--version-file", "version_info.txt"
-            "window_mirror.py"
-          )
-        } else {
-          $pyinstallerArgs = @(
-            "--onefile"
-            "--windowed" 
-            "--name", "WindowMirror"
-            "--distpath", "dist"
-            "--workpath", "build/work"
-            "--specpath", "build"
-            "--exclude-module", "tkinter.test"
-            "--exclude-module", "unittest"
-            "--exclude-module", "test"
-            "--exclude-module", "pydoc"
-            "--exclude-module", "doctest"
-            "window_mirror.py"
-          )
-        }
+        Write-Host "Build completed. Checking results..."
         
-        Write-Host "Running PyInstaller with arguments:"
-        $pyinstallerArgs | ForEach-Object { Write-Host "  $_" }
-        
-        & pyinstaller $pyinstallerArgs
-        
-        Write-Host "PyInstaller completed. Checking results..."
-        Get-ChildItem -Path "dist" -ErrorAction SilentlyContinue
-        
-        # Check file size to ensure it's within limits
         if (Test-Path "dist\WindowMirror.exe") {
           $fileInfo = Get-Item "dist\WindowMirror.exe"
           $sizeMB = [math]::Round($fileInfo.Length / 1MB, 2)
-          Write-Host "✓ EXE created successfully!"
-          Write-Host "✓ EXE Size: $sizeMB MB"
-          Write-Host "✓ EXE Location: $($fileInfo.FullName)"
-          if ($sizeMB -gt 100) {
-            Write-Warning "Large file size detected: $sizeMB MB"
-          }
+          Write-Host "SUCCESS: WindowMirror.exe created!"
+          Write-Host "File size: $sizeMB MB"
+          Write-Host "Location: $($fileInfo.FullName)"
         } else {
-          Write-Error "WindowMirror.exe was not created!"
+          Write-Host "ERROR: WindowMirror.exe was not created!"
           Write-Host "Contents of dist directory:"
-          Get-ChildItem -Path "dist" -Recurse -ErrorAction SilentlyContinue
-          Write-Host "Contents of build directory:"
-          Get-ChildItem -Path "build" -Recurse -ErrorAction SilentlyContinue
-          throw "Build failed - WindowMirror.exe not found"
+          Get-ChildItem -Path "dist" -ErrorAction SilentlyContinue
+          throw "Build failed"
         }
       shell: powershell
     
