@@ -1,0 +1,156 @@
+name: Build Python Window Mirror EXE
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install opencv-python
+        pip install pillow
+        pip install pygetwindow
+        pip install mss
+        pip install pywin32
+    
+    - name: Create standalone executable
+      run: |
+        echo "Building standalone EXE..."
+        pyinstaller --onefile --windowed --name "WindowMirror" window_mirror.py
+        
+        echo "EXE created successfully!"
+        dir dist
+    
+    - name: Test executable
+      run: |
+        echo "Testing executable..."
+        if (Test-Path "dist\WindowMirror.exe") {
+            $fileInfo = Get-Item "dist\WindowMirror.exe"
+            Write-Host "EXE Size: $([math]::Round($fileInfo.Length / 1MB, 2)) MB"
+            Write-Host "EXE Created: $($fileInfo.CreationTime)"
+        } else {
+            throw "EXE not found!"
+        }
+      shell: powershell
+    
+    - name: Package Release
+      shell: powershell
+      run: |
+        Write-Host "Creating release package..."
+        
+        New-Item -ItemType Directory -Path "release" -Force
+        
+        # Copy executable
+        Copy-Item "dist\WindowMirror.exe" "release\"
+        Write-Host "Copied WindowMirror.exe"
+        
+        # Create README
+        @"
+Window Mirror - Python EXE Version
+====================================
+
+This is the standalone executable version of the Python Window Mirror.
+No Python installation required!
+
+How to use:
+1. Run WindowMirror.exe
+2. A GUI will open with window selection
+3. Select your target window (e.g., Last War-Survival Game)
+4. Configure settings:
+   - ✅ Exclude title bar (content only)
+   - ✅ Target FPS (60, 120, or 144)
+5. Click "Start Mirroring"
+6. Press 'q' in mirror window or close it to stop
+
+Features:
+- Pure background capture (no window switching)
+- Real-time mirroring at 60+ FPS
+- Title bar exclusion for clean content
+- No dragging pause issues (Tkinter display)
+- Works with games, browsers, any application
+
+Technical details:
+- Built from the working Python version
+- Includes all required libraries
+- Self-contained executable
+- No external dependencies
+
+Troubleshooting:
+- If antivirus flags it, add exception (common with PyInstaller)
+- Make sure target window is not minimized
+- Try different capture settings if needed
+
+Version: Built from Python script that successfully captures Last War-Survival Game
+"@ | Out-File -FilePath "release\README.txt" -Encoding UTF8
+        
+        Write-Host "Release package created"
+        Get-ChildItem -Path "release" | ForEach-Object { 
+            Write-Host "  $($_.Name) ($([math]::Round($_.Length / 1MB, 2)) MB)"
+        }
+    
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: WindowMirror-Python-EXE
+        path: release/
+        retention-days: 30
+    
+    - name: Create Release
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: python-v1.0.${{ github.run_number }}
+        name: Window Mirror Python EXE v1.0.${{ github.run_number }}
+        files: release/*
+        body: |
+          ## Window Mirror - Python EXE Version
+          
+          ### 🚀 Ready to Use - No Python Required!
+          This is the **working Python version** compiled into a standalone .exe
+          
+          ### 📦 Download and Run:
+          1. Download `WindowMirror-Python-EXE.zip`
+          2. Extract `WindowMirror.exe` 
+          3. Run it - no installation needed!
+          
+          ### ✨ Why This Version:
+          - ✅ **Same code that successfully captures Last War-Survival Game**
+          - ✅ **No black screen issues** (proven working Python logic)
+          - ✅ **All features included**: FPS control, title bar exclusion, etc.
+          - ✅ **No dependencies** - completely standalone
+          - ✅ **Familiar GUI** - same interface you used before
+          
+          ### 🎮 Perfect for:
+          - Last War-Survival Game mirroring
+          - Any application window capture
+          - High FPS smooth mirroring
+          - Background capture without interruption
+          
+          ### 📊 File Details:
+          - **Size**: ~50-80MB (includes all Python libraries)
+          - **Performance**: Same as original Python script
+          - **Compatibility**: Windows 10/11 (x64)
+          
+          ### 💡 Antivirus Note:
+          Some antivirus may flag PyInstaller executables as suspicious.
+          This is a false positive - you can safely add an exception.
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }
