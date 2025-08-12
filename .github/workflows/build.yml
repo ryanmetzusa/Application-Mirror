@@ -62,43 +62,45 @@ jobs:
         Write-Host "Copied WindowMirror.exe"
         
         # Create README
-        @"
-Window Mirror - Python EXE Version
-====================================
+        $readmeContent = @"
+        Window Mirror - Python EXE Version
+        ====================================
 
-This is the standalone executable version of the Python Window Mirror.
-No Python installation required!
+        This is the standalone executable version of the Python Window Mirror.
+        No Python installation required!
 
-How to use:
-1. Run WindowMirror.exe
-2. A GUI will open with window selection
-3. Select your target window (e.g., Last War-Survival Game)
-4. Configure settings:
-   - ✅ Exclude title bar (content only)
-   - ✅ Target FPS (60, 120, or 144)
-5. Click "Start Mirroring"
-6. Press 'q' in mirror window or close it to stop
+        How to use:
+        1. Run WindowMirror.exe
+        2. A GUI will open with window selection
+        3. Select your target window (e.g., Last War-Survival Game)
+        4. Configure settings:
+           - ✅ Exclude title bar (content only)
+           - ✅ Target FPS (60, 120, or 144)
+        5. Click "Start Mirroring"
+        6. Press 'q' in mirror window or close it to stop
 
-Features:
-- Pure background capture (no window switching)
-- Real-time mirroring at 60+ FPS
-- Title bar exclusion for clean content
-- No dragging pause issues (Tkinter display)
-- Works with games, browsers, any application
+        Features:
+        - Pure background capture (no window switching)
+        - Real-time mirroring at 60+ FPS
+        - Title bar exclusion for clean content
+        - No dragging pause issues (Tkinter display)
+        - Works with games, browsers, any application
 
-Technical details:
-- Built from the working Python version
-- Includes all required libraries
-- Self-contained executable
-- No external dependencies
+        Technical details:
+        - Built from the working Python version
+        - Includes all required libraries
+        - Self-contained executable
+        - No external dependencies
 
-Troubleshooting:
-- If antivirus flags it, add exception (common with PyInstaller)
-- Make sure target window is not minimized
-- Try different capture settings if needed
+        Troubleshooting:
+        - If antivirus flags it, add exception (common with PyInstaller)
+        - Make sure target window is not minimized
+        - Try different capture settings if needed
 
-Version: Built from Python script that successfully captures Last War-Survival Game
-"@ | Out-File -FilePath "release\README.txt" -Encoding UTF8
+        Version: Built from Python script that successfully captures Last War-Survival Game
+        "@
+        
+        $readmeContent | Out-File -FilePath "release\README.txt" -Encoding UTF8
         
         Write-Host "Release package created"
         Get-ChildItem -Path "release" | ForEach-Object { 
@@ -153,4 +155,4 @@ Version: Built from Python script that successfully captures Last War-Survival G
           This is a false positive - you can safely add an exception.
         generate_release_notes: true
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
