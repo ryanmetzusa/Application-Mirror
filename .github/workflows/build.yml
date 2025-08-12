@@ -67,28 +67,44 @@ jobs:
     
     - name: Create standalone executable
       run: |
-        echo "Building standalone EXE with anti-virus optimizations..."
-        # Create short path build to avoid Windows path length limits
-        # Add --exclude-module to reduce false positives and file size
-        pyinstaller --onefile --windowed --name "WindowMirror" ^
-          --distpath dist --workpath build/work --specpath build ^
-          --exclude-module tkinter.test ^
-          --exclude-module unittest ^
-          --exclude-module test ^
-          --exclude-module pydoc ^
-          --exclude-module doctest ^
-          --add-data "README.md;." ^
-          --version-file version_info.txt ^
-          window_mirror.py
+        Write-Host "Building standalone EXE with anti-virus optimizations..."
         
-        echo "EXE created successfully!"
-        dir dist
+        # Create build directories
+        New-Item -ItemType Directory -Path "build/work" -Force
+        New-Item -ItemType Directory -Path "dist" -Force
+        
+        # Build with PyInstaller using PowerShell array syntax
+        $pyinstallerArgs = @(
+          "--onefile"
+          "--windowed" 
+          "--name", "WindowMirror"
+          "--distpath", "dist"
+          "--workpath", "build/work"
+          "--specpath", "build"
+          "--exclude-module", "tkinter.test"
+          "--exclude-module", "unittest"
+          "--exclude-module", "test"
+          "--exclude-module", "pydoc"
+          "--exclude-module", "doctest"
+          "--version-file", "version_info.txt"
+          "window_mirror.py"
+        )
+        
+        & pyinstaller $pyinstallerArgs
+        
+        Write-Host "EXE created successfully!"
+        Get-ChildItem -Path "dist"
+        
         # Check file size to ensure it's within limits
-        $fileInfo = Get-Item "dist\WindowMirror.exe"
-        $sizeMB = [math]::Round($fileInfo.Length / 1MB, 2)
-        Write-Host "EXE Size: $sizeMB MB"
-        if ($sizeMB -gt 100) {
-          Write-Warning "Large file size detected: $sizeMB MB"
+        if (Test-Path "dist\WindowMirror.exe") {
+          $fileInfo = Get-Item "dist\WindowMirror.exe"
+          $sizeMB = [math]::Round($fileInfo.Length / 1MB, 2)
+          Write-Host "EXE Size: $sizeMB MB"
+          if ($sizeMB -gt 100) {
+            Write-Warning "Large file size detected: $sizeMB MB"
+          }
+        } else {
+          throw "WindowMirror.exe was not created!"
         }
       shell: powershell
     
